@@ -19,7 +19,7 @@
 #            Miroslav Lichvar <mlichvar[at]redhat.com>
 #            Edward Sheldrake <ejsheldrake[at]gmail.com>
 #	     Arnaud Valensi <arnaud.valensi[at]gmail.com>
-
+import types
 import xdg.Menu, xdg.DesktopEntry, xdg.Config
 import re, sys, os
 from xml.sax.saxutils import escape
@@ -80,21 +80,10 @@ def walk_menu(entry):
 			'<command>%s</command></action>' % command
 		print '	</item>'
 
-menu_list = []
-submenu_list = []
-submenu = []
-
 def generate_awesome_menu(entry):
-	global submenu
-	global submenu_list
 	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
-		global menu_list
-		menu_list.append(entry_name(entry))
-
-		if submenu:
-			submenu_list.append(submenu);
-			submenu = []
-		map(generate_awesome_menu, entry.getEntries())
+		submenu = map(generate_awesome_menu, entry.getEntries())
+		return (entry_name(entry), submenu)
 	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
 		second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"' % entry_name(entry.DesktopEntry), entry.DesktopEntry.getExec())
 		second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
@@ -104,41 +93,33 @@ def generate_awesome_menu(entry):
 		first = entry_name(entry.DesktopEntry).replace('"', '')
 		first = first.replace('"', '\\"')
 		second = second.replace('"', '\\"')
-		submenu.append((first, second));
+		return (first, second)
 
-def generate_main_menu():
-	global submenu_list
-	global menu_list
-
-	# print submenu_list
-	# print menu_list
+def generate_main_menu(menu_list, level):
 
 	i = 0
-	for elem in submenu_list:
-		print "submenu%d =\n{" % i
-		j = 0
-		for entry in elem:
-			if j == len(elem) - 1:
-				print "  { \"%s\", \"%s\" }" % (entry[0], entry[1])
-			else:
-				print "  { \"%s\", \"%s\" }," % (entry[0], entry[1])
-			j += 1
-		print '}'
-		i += 1
-	print 'myappmenu =\n{'
-	i = 0
+	print "{"
 	for entry in menu_list:
-		if i == len(submenu_list):
-			print "  { \"%s\", submenu%d }" % (entry, i)
-		else:
-			print "  { \"%s\", submenu%d }," % (entry, i)
 		i += 1
-	print '}'
+		comma = "" if i == len(menu_list) else ","
+		print "%s{ \"%s\"," % (" "*(level+1)*2, entry[0].decode('utf8')),
+		if type(entry[1]) is list:
+			generate_main_menu(entry[1], level+1)
+			print "%s}%s" % (" "*(level+1)*2, comma)
+		else:
+			print "\"%s\"}%s" % (entry[1].decode('utf8'), comma)
+	print "%s}" % (" "*(level+1)*2)
 
 if len(sys.argv) > 1:
 	menufile = sys.argv[1] + '.menu'
 else:
 	menufile = 'applications.menu'
+
+#fix unicode issue when streaming to pipe
+if sys.stdout.encoding is None:
+	import codecs
+	writer = codecs.getwriter("utf-8")
+	sys.stdout = writer(sys.stdout)
 
 lang = os.environ.get('LANG')
 if lang:
@@ -153,7 +134,8 @@ if icons:
 menu = xdg.Menu.parse(menufile)
 
 #map(walk_menu, menu.getEntries())
-map(generate_awesome_menu, menu.getEntries())
+menu_list = map(generate_awesome_menu, menu.getEntries())
 
-generate_main_menu()
+print 'myappmenu ='
+generate_main_menu(menu_list, 0)
 
