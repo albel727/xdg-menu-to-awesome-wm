@@ -58,11 +58,8 @@ def icon_attr(entry):
 				return iconfile
 	return None
 
-def escape_utf8(s):
-	return escape(s.encode('utf-8', 'xmlcharrefreplace'))
-
 def entry_name(entry):
-	return escape_utf8(entry.getName())
+	return entry.getName()
 
 def generate_awesome_menu(entry):
 	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
@@ -86,13 +83,13 @@ def generate_main_menu(menu_list, level):
 	for entry in menu_list:
 		comma = " " if i == 0 else ","
 		i += 1
-		print "%s%s { \"%s\"" % (indent, comma, entry[0].decode('utf8'))
+		print "%s%s { \"%s\"" % (indent, comma, entry[0])
 		if type(entry[1]) is list:
 			print "%s  , {" % indent
 			generate_main_menu(entry[1], level+2)
 			print "%s    }" % indent
 		else:
-			print "%s  , \"%s\"" % (indent, entry[1].decode('utf8'))
+			print "%s  , \"%s\"" % (indent, entry[1])
 
 
 		if entry[2] is not None:
