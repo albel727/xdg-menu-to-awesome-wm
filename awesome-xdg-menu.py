@@ -33,25 +33,30 @@ except ImportError:
 
 def icon_attr(entry):
 	if icons is False:
-		return ''
+		return None 
 
 	name = entry.getIcon()
 
+	#awesome can't load ico icons, and fails to show whole submenu, containing them
+	if name.endswith(".ico"):
+		return None
+
 	if os.path.exists(name):
-		return ' icon="' + name + '"'
+		return name
 
 	# work around broken .desktop files
 	# unless the icon is a full path it should not have an extension
 	name = re.sub('\..{3,4}$', '', name)
 
-	# imlib2 cannot load svg
-	iconinfo = theme.lookup_icon(name, 22, Gtk.IconLookupFlags.NO_SVG)
-	if iconinfo:
-		iconfile = iconinfo.get_filename()
-		iconinfo.free()
-		if iconfile:
-			return ' icon="' + iconfile + '"'
-	return ''
+	for size in [32, 22, 16]:
+		# imlib2 cannot load svg
+		iconinfo = theme.lookup_icon(name, size, Gtk.IconLookupFlags.NO_SVG)
+		if iconinfo:
+			iconfile = iconinfo.get_filename()
+			iconinfo.free()
+			if iconfile:
+				return iconfile
+	return None
 
 def escape_utf8(s):
 	return escape(s.encode('utf-8', 'xmlcharrefreplace'))
@@ -59,31 +64,10 @@ def escape_utf8(s):
 def entry_name(entry):
 	return escape_utf8(entry.getName())
 
-def walk_menu(entry):
-	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
-		print '<menu id="%s" label="%s"%s>' \
-			% (entry_name(entry),
-			entry_name(entry),
-			escape_utf8(icon_attr(entry)))
-		map(walk_menu, entry.getEntries())
-		print '</menu>'
-	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
-		print '	<item label="%s"%s>' % \
-			(entry_name(entry.DesktopEntry).replace('"', ''),
-			escape_utf8(icon_attr(entry.DesktopEntry)))
-		command = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"' % entry_name(entry.DesktopEntry), entry.DesktopEntry.getExec())
-		command = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', command)
-		if entry.DesktopEntry.getTerminal():
-			command = 'xterm -title "%s" -e %s' % \
-				(entry_name(entry.DesktopEntry), command)
-		print '		<action name="Execute">' + \
-			'<command>%s</command></action>' % command
-		print '	</item>'
-
 def generate_awesome_menu(entry):
 	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
 		submenu = map(generate_awesome_menu, entry.getEntries())
-		return (entry_name(entry), submenu)
+		return (entry_name(entry), submenu, icon_attr(entry))
 	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
 		second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"' % entry_name(entry.DesktopEntry), entry.DesktopEntry.getExec())
 		second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
@@ -93,29 +77,36 @@ def generate_awesome_menu(entry):
 		first = entry_name(entry.DesktopEntry).replace('"', '')
 		first = first.replace('"', '\\"')
 		second = second.replace('"', '\\"')
-		return (first, second)
+		return (first, second, icon_attr(entry.DesktopEntry))
 
 def generate_main_menu(menu_list, level):
+	indent = " "*level*2
 
 	i = 0
-	print "{"
 	for entry in menu_list:
+		comma = " " if i == 0 else ","
 		i += 1
-		comma = "" if i == len(menu_list) else ","
-		print "%s{ \"%s\"," % (" "*(level+1)*2, entry[0].decode('utf8')),
+		print "%s%s { \"%s\"" % (indent, comma, entry[0].decode('utf8'))
 		if type(entry[1]) is list:
-			generate_main_menu(entry[1], level+1)
-			print "%s}%s" % (" "*(level+1)*2, comma)
+			print "%s  , {" % indent
+			generate_main_menu(entry[1], level+2)
+			print "%s    }" % indent
 		else:
-			print "\"%s\"}%s" % (entry[1].decode('utf8'), comma)
-	print "%s}" % (" "*(level+1)*2)
+			print "%s  , \"%s\"" % (indent, entry[1].decode('utf8'))
 
+
+		if entry[2] is not None:
+			print "%s  , \"%s\"" % (indent, entry[2])
+		print "%s  }" % indent
+
+
+#main proc:
 if len(sys.argv) > 1:
 	menufile = sys.argv[1] + '.menu'
 else:
 	menufile = 'applications.menu'
 
-#fix unicode issue when streaming to pipe
+# fix unicode issue when streaming to pipe
 if sys.stdout.encoding is None:
 	import codecs
 	writer = codecs.getwriter("utf-8")
@@ -129,13 +120,13 @@ if lang:
 xdg.Config.setWindowManager('GNOME')
 
 if icons:
-  theme = Gtk.IconTheme.get_default()
+	theme = Gtk.IconTheme.get_default()
 
 menu = xdg.Menu.parse(menufile)
 
-#map(walk_menu, menu.getEntries())
 menu_list = map(generate_awesome_menu, menu.getEntries())
 
-print 'myappmenu ='
+print 'myappmenu = {'
 generate_main_menu(menu_list, 0)
+print '}'
 
