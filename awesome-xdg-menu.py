@@ -99,9 +99,9 @@ def generate_main_menu(menu_list, level):
 
 #main proc:
 if len(sys.argv) > 1:
-	menufile = sys.argv[1] + '.menu'
+	menufiles = sys.argv[1:]
 else:
-	menufile = 'applications.menu'
+	menufiles = ['applications.menu']
 
 # fix unicode issue when streaming to pipe
 if sys.stdout.encoding is None:
@@ -119,9 +119,9 @@ xdg.Config.setWindowManager('GNOME')
 if icons:
 	theme = Gtk.IconTheme.get_default()
 
-menu = xdg.Menu.parse(menufile)
+menus = map(xdg.Menu.parse, menufiles)
 
-menu_list = map(generate_awesome_menu, menu.getEntries())
+menu_list = map(generate_awesome_menu, menus)
 
 print 'myappmenu = {'
 generate_main_menu(menu_list, 0)
