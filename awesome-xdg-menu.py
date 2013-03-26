@@ -123,7 +123,7 @@ menus = map(xdg.Menu.parse, menufiles)
 
 menu_list = map(generate_awesome_menu, menus)
 
-print 'myappmenu = {'
+print 'return {'
 generate_main_menu(menu_list, 0)
 print '}'
 
