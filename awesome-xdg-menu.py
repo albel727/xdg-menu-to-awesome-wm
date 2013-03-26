@@ -33,7 +33,7 @@ except ImportError:
 
 def icon_attr(entry):
 	if icons is False:
-		return None 
+		return None
 
 	name = entry.getIcon()
 
@@ -61,20 +61,26 @@ def icon_attr(entry):
 def entry_name(entry):
 	return entry.getName()
 
+def get_desktop_entry_triple(desktop_entry):
+	name = entry_name(desktop_entry)
+	get_exec = desktop_entry.getExec()
+	second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"  ' % name, get_exec)
+	second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
+	if desktop_entry.getTerminal():
+		second = 'xterm -title "%s" -e %s' % (name, second)
+	first = name.replace('"', '')
+	first = first.replace('"', '\\"')
+	second = second.replace('"', '\\"')
+	third = icon_attr(desktop_entry)
+	return first, second, third
+
 def generate_awesome_menu(entry):
 	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
 		submenu = map(generate_awesome_menu, entry.getEntries())
-		return (entry_name(entry), submenu, icon_attr(entry))
+		return entry_name(entry), submenu, icon_attr(entry)
 	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
-		second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"' % entry_name(entry.DesktopEntry), entry.DesktopEntry.getExec())
-		second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
-		if entry.DesktopEntry.getTerminal():
-			second = 'xterm -title "%s" -e %s' % \
-				(entry_name(entry.DesktopEntry), second)
-		first = entry_name(entry.DesktopEntry).replace('"', '')
-		first = first.replace('"', '\\"')
-		second = second.replace('"', '\\"')
-		return (first, second, icon_attr(entry.DesktopEntry))
+		desktop_entry = entry.DesktopEntry
+		return get_desktop_entry_triple(desktop_entry)
 
 def generate_main_menu(menu_list, level):
 	indent = " "*level*2
