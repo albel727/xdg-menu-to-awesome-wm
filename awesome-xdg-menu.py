@@ -64,14 +64,18 @@ def entry_name(entry):
 
 def get_desktop_entry_triple(desktop_entry):
 	name = entry_name(desktop_entry)
-	get_exec = desktop_entry.getExec()
-	second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"  ' % name, get_exec)
-	second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
-	if desktop_entry.getTerminal():
-		second = 'xterm -title "%s" -e %s' % (name, second)
+
+	if desktop_entry.getExec():
+		second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"  ' % name, desktop_entry.getExec())
+		second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
+		if desktop_entry.getTerminal():
+			second = 'xterm -title "%s" -e %s' % (name, second)
+		second = second.replace('"', '\\"')
+	elif desktop_entry.getURL():
+		second = 'xdg-open %s' % desktop_entry.getURL()
+
 	first = name.replace('"', '')
 	first = first.replace('"', '\\"')
-	second = second.replace('"', '\\"')
 	third = icon_attr(desktop_entry)
 	return first, second, third
 
