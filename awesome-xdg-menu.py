@@ -20,7 +20,8 @@
 #            Edward Sheldrake <ejsheldrake[at]gmail.com>
 #	     Arnaud Valensi <arnaud.valensi[at]gmail.com>
 import types
-import xdg.Menu, xdg.DesktopEntry, xdg.Config
+import xdg.Menu, xdg.Config
+from xdg.DesktopEntry import DesktopEntry
 import re, sys, os
 from xml.sax.saxutils import escape
 
@@ -79,8 +80,15 @@ def generate_awesome_menu(entry):
 		submenu = map(generate_awesome_menu, entry.getEntries())
 		return entry_name(entry), submenu, icon_attr(entry)
 	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
-		desktop_entry = entry.DesktopEntry
-		return get_desktop_entry_triple(desktop_entry)
+		return get_desktop_entry_triple(entry.DesktopEntry)
+	elif isinstance(entry, DesktopEntry):
+		return get_desktop_entry_triple(entry)
+
+def parse_to_entries(file_name):
+	if file_name.endswith('.menu'):
+		return xdg.Menu.parse(file_name)
+	else:
+		return DesktopEntry(file_name)
 
 def generate_main_menu(menu_list, level):
 	indent = " "*level*2
@@ -125,7 +133,7 @@ xdg.Config.setWindowManager('GNOME')
 if icons:
 	theme = Gtk.IconTheme.get_default()
 
-menus = map(xdg.Menu.parse, menufiles)
+menus = map(parse_to_entries, menufiles)
 
 menu_list = map(generate_awesome_menu, menus)
 
