@@ -88,7 +88,9 @@ def parse_to_entries(file_name):
 	if file_name.endswith('.menu'):
 		return xdg.Menu.parse(file_name)
 	else:
-		return DesktopEntry(file_name)
+		result = DesktopEntry()
+		result.parse(file_name)
+		return result
 
 def generate_main_menu(menu_list, level):
 	indent = " "*level*2
