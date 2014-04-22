@@ -54,7 +54,7 @@ def icon_attr(entry):
 		iconinfo = theme.lookup_icon(name, size, Gtk.IconLookupFlags.NO_SVG)
 		if iconinfo:
 			iconfile = iconinfo.get_filename()
-			iconinfo.free()
+			#iconinfo.free()
 			if iconfile:
 				return iconfile
 	return None
