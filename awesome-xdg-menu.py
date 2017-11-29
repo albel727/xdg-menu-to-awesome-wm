@@ -24,6 +24,15 @@ import xdg.Menu, xdg.Config
 from xdg.DesktopEntry import DesktopEntry
 import re, sys, os
 from xml.sax.saxutils import escape
+import itertools as IT
+
+def grouper(n, iterable):
+	"""
+	>>> list(grouper(3, 'ABCDEFG'))
+	[['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
+	"""
+	iterable = iter(iterable)
+	return iter(lambda: list(IT.islice(iterable, n)), [])
 
 icons = True
 
@@ -82,7 +91,19 @@ def get_desktop_entry_triple(desktop_entry):
 def generate_awesome_menu(entry):
 	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
 		submenu = map(generate_awesome_menu, entry.getEntries())
-		return entry_name(entry), submenu, icon_attr(entry)
+		e_name = entry_name(entry)
+		e_icon = icon_attr(entry)
+		chunks = list(grouper(30, submenu))
+
+		if len(chunks) > 1:
+			res2 = []
+			res = res2
+			for idx, val in enumerate(chunks):
+				res2.append(("More...", val, None))
+				res2 = val
+			return e_name, res[0][1], e_icon
+		else:
+			return e_name, submenu, e_icon
 	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
 		return get_desktop_entry_triple(entry.DesktopEntry)
 	elif isinstance(entry, DesktopEntry):
