@@ -124,18 +124,18 @@ def generate_main_menu(menu_list, level):
 	for entry in menu_list:
 		comma = " " if i == 0 else ","
 		i += 1
-		print "%s%s { \"%s\"" % (indent, comma, entry[0])
+		print("%s%s { \"%s\"" % (indent, comma, entry[0]))
 		if type(entry[1]) is list:
-			print "%s  , {" % indent
+			print("%s  , {" % indent)
 			generate_main_menu(entry[1], level+2)
-			print "%s    }" % indent
+			print("%s    }" % indent)
 		else:
-			print "%s  , \"%s\"" % (indent, entry[1])
+			print("%s  , \"%s\"" % (indent, entry[1]))
 
 
 		if entry[2] is not None:
-			print "%s  , \"%s\"" % (indent, entry[2])
-		print "%s  }" % indent
+			print("%s  , \"%s\"" % (indent, entry[2]))
+		print("%s  }" % indent)
 
 
 #main proc:
@@ -164,7 +164,7 @@ menus = map(parse_to_entries, menufiles)
 
 menu_list = map(generate_awesome_menu, menus)
 
-print 'return {'
+print('return {')
 generate_main_menu(menu_list, 0)
-print '}'
+print('}')
 
