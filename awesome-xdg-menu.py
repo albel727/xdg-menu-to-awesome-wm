@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (C) 2008  Red Hat, Inc.
 #
@@ -99,7 +99,7 @@ def get_desktop_entry_triple(desktop_entry):
 
 def generate_awesome_menu(entry):
     if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
-        submenu = map(generate_awesome_menu, entry.getEntries())
+        submenu = list(map(generate_awesome_menu, entry.getEntries()))
         e_name = entry_name(entry)
         e_icon = icon_attr(entry)
         chunks = list(grouper(30, submenu))
