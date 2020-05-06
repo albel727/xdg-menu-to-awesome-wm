@@ -26,141 +26,150 @@ import re, sys, os
 from xml.sax.saxutils import escape
 import itertools as IT
 
+
 def grouper(n, iterable):
-	"""
-	>>> list(grouper(3, 'ABCDEFG'))
-	[['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
-	"""
-	iterable = iter(iterable)
-	return iter(lambda: list(IT.islice(iterable, n)), [])
+    """
+    >>> list(grouper(3, 'ABCDEFG'))
+    [['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
+    """
+    iterable = iter(iterable)
+    return iter(lambda: list(IT.islice(iterable, n)), [])
+
 
 icons = True
 
 try:
-	import gi
-	gi.require_version('Gtk', '3.0')
-	from gi.repository import Gtk
+    import gi
+
+    gi.require_version('Gtk', '3.0')
+    from gi.repository import Gtk
 except ImportError:
-	icons = False
+    icons = False
+
 
 def icon_attr(entry):
-	if icons is False:
-		return None
+    if icons is False:
+        return None
 
-	name = entry.getIcon()
+    name = entry.getIcon()
 
-	#awesome can't load ico icons, and fails to show whole submenu, containing them
-	if name.endswith(".ico"):
-		return None
+    # awesome can't load ico icons, and fails to show whole submenu, containing them
+    if name.endswith(".ico"):
+        return None
 
-	if os.path.exists(name):
-		return name
+    if os.path.exists(name):
+        return name
 
-	# work around broken .desktop files
-	# unless the icon is a full path it should not have an extension
-	name = re.sub('\..{3,4}$', '', name)
+    # work around broken .desktop files
+    # unless the icon is a full path it should not have an extension
+    name = re.sub('\..{3,4}$', '', name)
 
-	for size in [32, 22, 16]:
-		# imlib2 cannot load svg
-		iconinfo = theme.lookup_icon(name, size, Gtk.IconLookupFlags.NO_SVG)
-		if iconinfo:
-			iconfile = iconinfo.get_filename()
-			#iconinfo.free()
-			if iconfile:
-				return iconfile
-	return None
+    for size in [32, 22, 16]:
+        # imlib2 cannot load svg
+        iconinfo = theme.lookup_icon(name, size, Gtk.IconLookupFlags.NO_SVG)
+        if iconinfo:
+            iconfile = iconinfo.get_filename()
+            # iconinfo.free()
+            if iconfile:
+                return iconfile
+    return None
+
 
 def entry_name(entry):
-	return entry.getName()
+    return entry.getName()
+
 
 def get_desktop_entry_triple(desktop_entry):
-	name = entry_name(desktop_entry)
+    name = entry_name(desktop_entry)
 
-	if desktop_entry.getExec():
-		second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"  ' % name, desktop_entry.getExec())
-		second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
-		if desktop_entry.getTerminal():
-			second = 'xterm -title "%s" -e %s' % (name, second)
-		second = second.replace('"', '\\"')
-	elif desktop_entry.getURL():
-		second = 'xdg-open %s' % desktop_entry.getURL()
+    if desktop_entry.getExec():
+        second = re.sub(' -caption "%c"| -caption %c', ' -caption "%s"  ' % name, desktop_entry.getExec())
+        second = re.sub(' [^ ]*%[fFuUdDnNickvm]', '', second)
+        if desktop_entry.getTerminal():
+            second = 'xterm -title "%s" -e %s' % (name, second)
+        second = second.replace('"', '\\"')
+    elif desktop_entry.getURL():
+        second = 'xdg-open %s' % desktop_entry.getURL()
 
-	first = name.replace('"', '')
-	first = first.replace('"', '\\"')
-	third = icon_attr(desktop_entry)
-	return first, second, third
+    first = name.replace('"', '')
+    first = first.replace('"', '\\"')
+    third = icon_attr(desktop_entry)
+    return first, second, third
+
 
 def generate_awesome_menu(entry):
-	if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
-		submenu = map(generate_awesome_menu, entry.getEntries())
-		e_name = entry_name(entry)
-		e_icon = icon_attr(entry)
-		chunks = list(grouper(30, submenu))
+    if isinstance(entry, xdg.Menu.Menu) and entry.Show is True:
+        submenu = map(generate_awesome_menu, entry.getEntries())
+        e_name = entry_name(entry)
+        e_icon = icon_attr(entry)
+        chunks = list(grouper(30, submenu))
 
-		if len(chunks) > 1:
-			res2 = []
-			res = res2
-			for idx, val in enumerate(chunks):
-				res2.append(("More...", val, None))
-				res2 = val
-			return e_name, res[0][1], e_icon
-		else:
-			return e_name, submenu, e_icon
-	elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
-		return get_desktop_entry_triple(entry.DesktopEntry)
-	elif isinstance(entry, DesktopEntry):
-		return get_desktop_entry_triple(entry)
+        if len(chunks) > 1:
+            res2 = []
+            res = res2
+            for idx, val in enumerate(chunks):
+                res2.append(("More...", val, None))
+                res2 = val
+            return e_name, res[0][1], e_icon
+        else:
+            return e_name, submenu, e_icon
+    elif isinstance(entry, xdg.Menu.MenuEntry) and entry.Show is True:
+        return get_desktop_entry_triple(entry.DesktopEntry)
+    elif isinstance(entry, DesktopEntry):
+        return get_desktop_entry_triple(entry)
+
 
 def parse_to_entries(file_name):
-	if file_name.endswith('.menu'):
-		return xdg.Menu.parse(file_name)
-	else:
-		result = DesktopEntry()
-		result.parse(file_name)
-		return result
+    if file_name.endswith('.menu'):
+        return xdg.Menu.parse(file_name)
+    else:
+        result = DesktopEntry()
+        result.parse(file_name)
+        return result
+
 
 def generate_main_menu(menu_list, level):
-	indent = " "*level*2
+    indent = " " * level * 2
 
-	i = 0
-	for entry in menu_list:
-		comma = " " if i == 0 else ","
-		i += 1
-		print("%s%s { \"%s\"" % (indent, comma, entry[0]))
-		if type(entry[1]) is list:
-			print("%s  , {" % indent)
-			generate_main_menu(entry[1], level+2)
-			print("%s    }" % indent)
-		else:
-			print("%s  , \"%s\"" % (indent, entry[1]))
+    i = 0
+    for entry in menu_list:
+        comma = " " if i == 0 else ","
+        i += 1
+        print("%s%s { \"%s\"" % (indent, comma, entry[0]))
+        if type(entry[1]) is list:
+            print("%s  , {" % indent)
+            generate_main_menu(entry[1], level + 2)
+            print("%s    }" % indent)
+        else:
+            print("%s  , \"%s\"" % (indent, entry[1]))
+
+        if entry[2] is not None:
+            print("%s  , \"%s\"" % (indent, entry[2]))
+        print("%s  }" % indent)
 
 
-		if entry[2] is not None:
-			print("%s  , \"%s\"" % (indent, entry[2]))
-		print("%s  }" % indent)
-
-
-#main proc:
+# main proc:
 if len(sys.argv) > 1:
-	menufiles = sys.argv[1:]
+    menufiles = sys.argv[1:]
 else:
-	menufiles = ['applications.menu']
+    menufiles = ['applications.menu']
 
 # fix unicode issue when streaming to pipe
 if sys.stdout.encoding is None:
-	import codecs
-	writer = codecs.getwriter("utf-8")
-	sys.stdout = writer(sys.stdout)
+    import codecs
+
+    writer = codecs.getwriter("utf-8")
+    sys.stdout = writer(sys.stdout)
 
 lang = os.environ.get('LANG')
 if lang:
-	xdg.Config.setLocale(lang)
+    xdg.Config.setLocale(lang)
 
 # lie to get the same menu as in GNOME
 xdg.Config.setWindowManager('GNOME')
 
 if icons:
-	theme = Gtk.IconTheme.get_default()
+    theme = Gtk.IconTheme.get_default()
 
 menus = map(parse_to_entries, menufiles)
 
@@ -169,4 +178,3 @@ menu_list = map(generate_awesome_menu, menus)
 print('return {')
 generate_main_menu(menu_list, 0)
 print('}')
-
